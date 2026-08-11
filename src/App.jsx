@@ -5,7 +5,7 @@ import {
   Plane, ArrowRight, Eye, EyeOff, User, Briefcase, Lock, Globe
 } from 'lucide-react';
 
-// --- Scroll-Scrubbed Video Background (FIXED: Crash-proof) ---
+// --- Scroll-Scrubbed Video Background (FIXED: Immediate Animation + Fallbacks) ---
 const ScrollScrubbedVideoBackground = ({ videoSrc }) => {
   const canvasRef = useRef(null);
   const frameCache = useRef([]);
@@ -16,6 +16,10 @@ const ScrollScrubbedVideoBackground = ({ videoSrc }) => {
   const targetTimeRef = useRef(0);
   const animationIdRef = useRef(null);
   const isMountedRef = useRef(true);
+
+  // State to handle loading/fallback transitions
+  const [isVideoReady, setIsVideoReady] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -51,7 +55,6 @@ const ScrollScrubbedVideoBackground = ({ videoSrc }) => {
       try {
         const cw = canvas.width / dpr;
         const ch = canvas.height / dpr;
-        // Standard safe fallback size if video dimensions unknown
         const vw = 1920, vh = 1080; 
         const scaleX = cw / vw;
         const scaleY = ch / vh;
@@ -63,7 +66,7 @@ const ScrollScrubbedVideoBackground = ({ videoSrc }) => {
 
         ctx.clearRect(0, 0, cw, ch);
 
-        // 1. Use Frame Cache
+        // 1. Use Frame Cache (Priority)
         if (extractionComplete && frameCache.current.length > 0) {
           const index = Math.floor(progress * (frameCache.current.length - 1));
           const bitmap = frameCache.current[index];
@@ -73,7 +76,7 @@ const ScrollScrubbedVideoBackground = ({ videoSrc }) => {
           }
         }
 
-        // 2. Fallback: Seek video element
+        // 2. Fallback: Seek visible video element
         if (videoRef.current && videoRef.current.readyState >= 2) {
           const targetSeek = Math.max(0, Math.min(progress * duration, duration - 0.05));
           if (Math.abs(videoRef.current.currentTime - targetSeek) > 0.04) {
@@ -82,7 +85,7 @@ const ScrollScrubbedVideoBackground = ({ videoSrc }) => {
           try { ctx.drawImage(videoRef.current, sx, sy, sw, sh); } catch (e) {}
         }
       } catch (e) {
-        // Fail silently so the app never crashes
+        // Fail silently
       }
     };
 
@@ -103,14 +106,12 @@ const ScrollScrubbedVideoBackground = ({ videoSrc }) => {
           const onError = () => reject(new Error("Video load failed"));
           video.addEventListener('loadeddata', onLoaded);
           video.addEventListener('error', onError);
-          // Safety timeout if network is slow
           setTimeout(() => {
              if (video.readyState < 2) reject(new Error("Video load timeout"));
           }, 5000);
         });
 
         duration = video.duration || 1;
-        // Calculate frames based on 12fps (capped)
         totalFrames = Math.min(90, Math.max(24, Math.floor(duration * 12)));
 
         const offscreenCanvas = document.createElement('canvas');
@@ -124,22 +125,18 @@ const ScrollScrubbedVideoBackground = ({ videoSrc }) => {
           const time = (i / (totalFrames - 1)) * duration;
           video.currentTime = time;
           
-          // Wait for seek
           await new Promise(resolve => {
             const onSeek = () => { video.removeEventListener('seeked', onSeek); resolve(); };
             video.addEventListener('seeked', onSeek);
-            // Safety timeout
             setTimeout(resolve, 500);
           });
 
           offCtx.drawImage(video, 0, 0, 960, 540);
           
-          // Try to save as ImageBitmap (faster), fallback to Canvas
           try {
             const bitmap = await createImageBitmap(offscreenCanvas);
             cache.push(bitmap);
           } catch (e) {
-            // Safe fallback if createImageBitmap fails
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = 960;
             tempCanvas.height = 540;
@@ -152,6 +149,10 @@ const ScrollScrubbedVideoBackground = ({ videoSrc }) => {
         if (isMountedRef.current) {
           frameCache.current = cache;
           extractionComplete = true;
+          // REVEAL THE SCRUBBED CANVAS BY FADING IT IN
+          if (canvasRef.current) {
+            canvasRef.current.style.opacity = '1';
+          }
           drawFrame(currentTimeRef.current);
         }
       } catch (error) {
@@ -175,7 +176,6 @@ const ScrollScrubbedVideoBackground = ({ videoSrc }) => {
         animationIdRef.current = requestAnimationFrame(animate);
         return;
       }
-      // Smooth Lerp
       currentTimeRef.current += (targetTimeRef.current - currentTimeRef.current) * 0.12;
       drawFrame(currentTimeRef.current);
       animationIdRef.current = requestAnimationFrame(animate);
@@ -185,7 +185,7 @@ const ScrollScrubbedVideoBackground = ({ videoSrc }) => {
     window.addEventListener('resize', resizeCanvas);
     
     resizeCanvas();
-    // Delay extraction so UI thread doesn't hang on load
+    // Start extracting frames
     setTimeout(extractFrames, 400);
 
     animationIdRef.current = requestAnimationFrame(animate);
@@ -196,7 +196,6 @@ const ScrollScrubbedVideoBackground = ({ videoSrc }) => {
       window.removeEventListener('resize', resizeCanvas);
       if (animationIdRef.current) cancelAnimationFrame(animationIdRef.current);
       
-      // Cleanup ImageBitmaps
       frameCache.current.forEach(b => { 
         if (b && typeof b.close === 'function') b.close(); 
       });
@@ -204,18 +203,31 @@ const ScrollScrubbedVideoBackground = ({ videoSrc }) => {
   }, [videoSrc]);
 
   return (
-    <div className="fixed inset-0 w-full h-full z-0 pointer-events-none bg-[#0a0a0a] overflow-hidden">
-      {/* Fallback visible video element if canvas hasn't loaded yet */}
+    <div className="fixed inset-0 w-full h-full z-0 pointer-events-none overflow-hidden">
+      
+      {/* 1. IMMEDIATE ANIMATED FALLBACK (Visible instantly) */}
+      {/* Moving gradient that fades away once video loads */}
+      <div className={`absolute inset-0 bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460] transition-opacity duration-1000 ${isVideoReady || hasError ? 'opacity-0' : 'opacity-100'}`} />
+      
+      {/* 2. VISIBLE LOOPING VIDEO (Plays immediately so it's never black) */}
       <video 
         ref={visibleVideoRef}
-        src={videoSrc} 
+        src={videoSrc}
         muted 
+        autoPlay 
+        loop 
         playsInline 
         preload="auto"
-        className="absolute inset-0 w-full h-full object-cover opacity-0 pointer-events-none"
+        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none"
+        onLoadedData={() => setIsVideoReady(true)}
+        onError={() => setHasError(true)} // Triggers gradient fallback if video completely fails
       />
-      {/* The main Canvas Renderer */}
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+
+      {/* 3. SCROLL-SCRUBBED CANVAS (Fades IN on top of the video when ready) */}
+      <canvas 
+        ref={canvasRef} 
+        className="absolute inset-0 w-full h-full transition-opacity duration-700 ease-out opacity-0" 
+      />
     </div>
   );
 };
@@ -462,7 +474,6 @@ const InteractiveLoginArea = ({ activeInput }) => {
 
 // --- Main Component ---
 const ConsultancyOSRedesign = () => {
-  // *** Replace this URL with your own if you want a different video ***
   const VIDEO_URL = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260729_102822_0e6c87e8-c141-4744-bf32-ad30db296371.mp4";
 
   const [loginType, setLoginType] = useState('student');
@@ -472,7 +483,7 @@ const ConsultancyOSRedesign = () => {
   return (
     <div className="min-h-screen bg-[#FAF8F4] text-slate-800 font-sans overflow-x-hidden selection:bg-blue-900 selection:text-white relative">
       
-      {/* --- NEW: Cinematic Scroll-Scrubbed Video Background --- */}
+      {/* --- Cinematic Scroll-Scrubbed Video Background --- */}
       <ScrollScrubbedVideoBackground videoSrc={VIDEO_URL} />
 
       {/* --- Navigation --- */}
@@ -645,8 +656,8 @@ const ConsultancyOSRedesign = () => {
               </div>
               <div className="flex bg-slate-100 p-1 rounded-full mb-8 shadow-inner relative w-full max-w-xs mx-auto md:mx-0">
                  <motion.div className="absolute top-1 bottom-1 bg-white rounded-full shadow-md w-[calc(50%-4px)]" animate={{ x: loginType === 'student' ? 0 : '100%' }} transition={{ type: "spring", stiffness: 300, damping: 25 }}/>
-                 <button onClick={() => setLoginType('student')} className={`flex-1 py-2 text-sm font-medium rounded-full relative z-10 transition-colors ${loginType === 'student' ? 'text-blue-900' : 'text-slate-500'}`}>Student</button>
-                 <button onClick={() => setLoginType('staff')} className={`flex-1 py-2 text-sm font-medium rounded-full relative z-10 transition-colors ${loginType === 'staff' ? 'text-blue-900' : 'text-slate-500'}`}>Staff</button>
+                 <button onClick={() => setLoginType('student')} className={loginType === 'student' ? 'flex-1 py-2 text-sm font-medium rounded-full relative z-10 transition-colors text-blue-900' : 'flex-1 py-2 text-sm font-medium rounded-full relative z-10 transition-colors text-slate-500'}>Student</button>
+                 <button onClick={() => setLoginType('staff')} className={loginType === 'staff' ? 'flex-1 py-2 text-sm font-medium rounded-full relative z-10 transition-colors text-blue-900' : 'flex-1 py-2 text-sm font-medium rounded-full relative z-10 transition-colors text-slate-500'}>Staff</button>
               </div>
               <form className="space-y-4 w-full max-w-sm mx-auto md:mx-0" onSubmit={(e) => e.preventDefault()}>
                 {loginType === 'student' && (
