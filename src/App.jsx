@@ -31,24 +31,13 @@ import {
 } from 'lucide-react';
 
 /* =========================================================
-   PREMIUM DESIGN SYSTEM (from the new file)
+   PREMIUM DESIGN SYSTEM
    ========================================================= */
-
-const palette = {
-  ink: '#0B1220',
-  navy: '#102A63',
-  blue: '#2563EB',
-  sky: '#38BDF8',
-  violet: '#7C3AED',
-  cyan: '#06B6D4',
-  amber: '#F59E0B',
-  cream: '#F7F8FC',
-};
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
 /* =========================================================
-   INTERACTIVE AMBIENT BACKGROUND
+   INTERACTIVE AMBIENT BACKGROUND (unchanged)
    ========================================================= */
 
 const InteractiveParticleNetwork = () => {
@@ -211,49 +200,116 @@ const BlurReveal = ({ children, delay = 0 }) => (
   </motion.div>
 );
 
-const SectionHeading = ({ eyebrow, title, body, dark = false }) => (
-  <div className="max-w-2xl">
-    <motion.div
-      initial={{ opacity: 0, x: -14 }}
-      whileInView={{ opacity: 1, x: 0 }}
-      viewport={{ once: true }}
-      className={cn(
-        'mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em]',
-        dark
-          ? 'border-white/15 bg-white/10 text-white/75'
-          : 'border-blue-100 bg-blue-50/80 text-blue-700',
+/* =========================================================
+   TYPING COMPONENTS
+   ========================================================= */
+
+// Hero Typewriter – loops through words
+const HeroTypewriter = ({ words, interval = 2600 }) => {
+  const [index, setIndex] = useState(0);
+  const [value, setValue] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    const word = words[index];
+
+    const timer = setTimeout(
+      () => {
+        if (!deleting) {
+          if (value.length < word.length) {
+            setValue(word.slice(0, value.length + 1));
+          } else {
+            setDeleting(true);
+          }
+        } else {
+          if (value.length > 0) {
+            setValue(word.slice(0, value.length - 1));
+          } else {
+            setDeleting(false);
+            setIndex((current) => (current + 1) % words.length);
+          }
+        }
+      },
+      deleting ? 45 : value.length === word.length ? interval : 92,
+    );
+
+    return () => clearTimeout(timer);
+  }, [value, deleting, index, words, interval]);
+
+  return (
+    <span className="relative inline-block min-w-[8ch] bg-gradient-to-r from-blue-700 via-violet-600 to-cyan-500 bg-clip-text text-transparent">
+      {value}
+      <span className="ml-0.5 inline-block h-[0.9em] w-[2px] translate-y-[0.08em] animate-pulse bg-blue-600" />
+    </span>
+  );
+};
+
+// Promise Typewriter – triggers on scroll and types line by line
+const PromiseTypewriter = ({ lines, delayBetweenLines = 600 }) => {
+  const [displayed, setDisplayed] = useState('');
+  const [lineIndex, setLineIndex] = useState(0);
+  const [charIndex, setCharIndex] = useState(0);
+  const [isComplete, setIsComplete] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasStarted) {
+          setHasStarted(true);
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    if (ref.current) observer.observe(ref.current);
+
+    return () => observer.disconnect();
+  }, [hasStarted]);
+
+  useEffect(() => {
+    if (!hasStarted) return;
+    if (lineIndex >= lines.length) {
+      setIsComplete(true);
+      return;
+    }
+
+    const currentLine = lines[lineIndex];
+    if (charIndex < currentLine.length) {
+      const timer = setTimeout(() => {
+        setDisplayed((prev) => prev + currentLine[charIndex]);
+        setCharIndex(charIndex + 1);
+      }, 25 + Math.random() * 20);
+      return () => clearTimeout(timer);
+    } else {
+      // Move to next line after a pause
+      const timer = setTimeout(() => {
+        setLineIndex(lineIndex + 1);
+        setCharIndex(0);
+        setDisplayed((prev) => prev + '\n'); // add line break
+      }, delayBetweenLines);
+      return () => clearTimeout(timer);
+    }
+  }, [hasStarted, lineIndex, charIndex, lines, delayBetweenLines]);
+
+  return (
+    <div ref={ref} className="font-serif font-semibold leading-[1.04] tracking-[-0.045em] text-slate-950">
+      <span className="whitespace-pre-wrap text-4xl md:text-5xl">
+        {displayed}
+        {!isComplete && hasStarted && (
+          <span className="inline-block h-[0.9em] w-[2px] translate-y-[0.08em] animate-pulse bg-blue-600" />
+        )}
+      </span>
+      {!hasStarted && (
+        <span className="text-4xl md:text-5xl text-slate-300">Built for consultancies<br />that care about<br />student experience.</span>
       )}
-    >
-      <Sparkles className="h-3.5 w-3.5" />
-      {eyebrow}
-    </motion.div>
-
-    <BlurReveal>
-      <h2
-        className={cn(
-          'text-4xl font-semibold leading-[1.05] tracking-[-0.04em] md:text-6xl',
-          dark ? 'text-white' : 'text-slate-950',
-        )}
-      >
-        {title}
-      </h2>
-    </BlurReveal>
-
-    <Reveal delay={0.08}>
-      <p
-        className={cn(
-          'mt-6 max-w-xl text-base leading-7 md:text-lg',
-          dark ? 'text-white/65' : 'text-slate-600',
-        )}
-      >
-        {body}
-      </p>
-    </Reveal>
-  </div>
-);
+    </div>
+  );
+};
 
 /* =========================================================
-   MAGNETIC BUTTON
+   MAGNETIC BUTTON & SPOTLIGHT CARD (unchanged)
    ========================================================= */
 
 const MagneticButton = ({ children, className = '', variant = 'primary', onClick }) => {
@@ -297,10 +353,6 @@ const MagneticButton = ({ children, className = '', variant = 'primary', onClick
     </motion.button>
   );
 };
-
-/* =========================================================
-   SPOTLIGHT CARD (3D TILT + GLOW)
-   ========================================================= */
 
 const SpotlightCard = ({ children, className = '', glow = 'blue', tilt = 6 }) => {
   const ref = useRef(null);
@@ -357,7 +409,7 @@ const SpotlightCard = ({ children, className = '', glow = 'blue', tilt = 6 }) =>
 };
 
 /* =========================================================
-   HERO VISUAL (replaces the image with a dashboard mockup)
+   HERO VISUAL (dashboard mockup)
    ========================================================= */
 
 const HeroVisual = () => {
@@ -589,9 +641,10 @@ const ConsultancyOSPremium = () => {
               Run your consultancy
               <br />
               with{' '}
-              <span className="bg-gradient-to-r from-blue-700 via-violet-600 to-cyan-500 bg-clip-text text-transparent">
-                clarity.
-              </span>
+              <HeroTypewriter
+                words={['clarity.', 'confidence.', 'possibilities.', 'belief.']}
+                interval={2400}
+              />
             </h1>
           </BlurReveal>
 
@@ -619,7 +672,7 @@ const ConsultancyOSPremium = () => {
         </div>
       </section>
 
-      {/* Feature Strip (now as SpotlightCards) */}
+      {/* Feature Strip */}
       <section className="relative z-10 px-6">
         <div className="mx-auto max-w-6xl">
           <div className="grid gap-4 md:grid-cols-3">
@@ -647,7 +700,7 @@ const ConsultancyOSPremium = () => {
         </div>
       </section>
 
-      {/* Promise Card (with Spotlight, removed image) */}
+      {/* Promise Card with Scroll-Triggered Typewriter */}
       <section id="promise" className="relative z-10 px-6 py-28 md:py-36">
         <div className="mx-auto max-w-6xl">
           <SpotlightCard glow="violet" className="min-h-[300px]">
@@ -659,18 +712,17 @@ const ConsultancyOSPremium = () => {
                     <span className="h-[2px] w-11 bg-gradient-to-r from-blue-500 to-violet-500" />
                   </div>
                 </Reveal>
-                <BlurReveal delay={0.08}>
-                  <h2 className="mt-5 max-w-md text-4xl font-semibold leading-[1.04] tracking-[-0.045em] text-slate-950 md:text-5xl">
-                    Built for consultancies
-                    <br />
-                    that care about
-                    <br />
-                    <span className="bg-gradient-to-r from-blue-700 to-violet-600 bg-clip-text text-transparent">
-                      student experience.
-                    </span>
-                  </h2>
-                </BlurReveal>
-                <Reveal delay={0.16}>
+                <div className="mt-5 max-w-md">
+                  <PromiseTypewriter
+                    lines={[
+                      'Built for consultancies',
+                      'that care about',
+                      'student experience.',
+                    ]}
+                    delayBetweenLines={500}
+                  />
+                </div>
+                <Reveal delay={0.3}>
                   <p className="mt-6 max-w-sm text-sm leading-6 text-slate-600">
                     ConsultancyOS helps you stay organized, respond faster, and guide every student
                     journey with confidence and care.
@@ -697,14 +749,31 @@ const ConsultancyOSPremium = () => {
         </div>
       </section>
 
-      {/* Feature Cards (the three from original) */}
+      {/* Feature Cards */}
       <section id="features" className="relative z-10 px-6 pb-20 md:pb-28">
         <div className="mx-auto max-w-6xl">
-          <SectionHeading
-            eyebrow="Core capabilities"
-            title="Everything you need to run a smooth consultancy."
-            body="Centralize, communicate, and protect—all in one polished workspace."
-          />
+          <div className="max-w-2xl">
+            <motion.div
+              initial={{ opacity: 0, x: -14 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/80 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Core capabilities
+            </motion.div>
+            <BlurReveal>
+              <h2 className="text-4xl font-semibold leading-[1.05] tracking-[-0.04em] text-slate-950 md:text-6xl">
+                Everything you need to run a smooth consultancy.
+              </h2>
+            </BlurReveal>
+            <Reveal delay={0.08}>
+              <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 md:text-lg">
+                Centralize, communicate, and protect—all in one polished workspace.
+              </p>
+            </Reveal>
+          </div>
+
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {[
               {
@@ -791,7 +860,7 @@ const ConsultancyOSPremium = () => {
         </div>
       </section>
 
-      {/* Empty anchor sections */}
+      {/* Anchor sections */}
       <section id="solutions" className="h-8" aria-hidden="true" />
       <section id="resources" className="h-0" aria-hidden="true" />
       <section id="pricing" className="h-0" aria-hidden="true" />
