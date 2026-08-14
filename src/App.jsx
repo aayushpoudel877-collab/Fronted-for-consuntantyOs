@@ -9,26 +9,17 @@ import {
 } from 'framer-motion';
 import {
   ArrowRight,
-  Briefcase,
   Check,
   ChevronDown,
-  Eye,
-  EyeOff,
-  FileText,
-  Globe,
-  GraduationCap,
   Heart,
   Layers3,
-  Lock,
   MessageCircle,
   MousePointer2,
   Phone,
-  Plane,
   Shield,
   Sparkles,
   Users,
-  User,
-  Zap,
+  Globe,
 } from 'lucide-react';
 
 /* =========================================================
@@ -414,64 +405,50 @@ const SketchCharacter = ({ mouseX, mouseY, peeking }) => {
   const rotateX = useTransform(mouseY, [-1, 1], [8, -8]);
   const rotateY = useTransform(mouseX, [-1, 1], [-12, 12]);
 
-  const pupilLeftX = useTransform(mouseX, [-1, 1], [87, 93]);
-  const pupilLeftY = useTransform(mouseY, [-1, 1], [46, 50]);
-  const pupilRightX = useTransform(mouseX, [-1, 1], [107, 113]);
-  const pupilRightY = useTransform(mouseY, [-1, 1], [46, 50]);
+  // Pupil translations (relative to eye center)
+  const pupilLeftOffsetX = useTransform(mouseX, [-1, 1], [-2, 2]);
+  const pupilLeftOffsetY = useTransform(mouseY, [-1, 1], [-1.5, 1.5]);
+  const pupilRightOffsetX = useTransform(mouseX, [-1, 1], [-2, 2]);
+  const pupilRightOffsetY = useTransform(mouseY, [-1, 1], [-1.5, 1.5]);
 
   return (
     <motion.div style={{ rotateX, rotateY, transformPerspective: 800 }} className="w-full h-full">
       <svg viewBox="0 0 200 200" fill="none" className="w-full h-full">
         {/* Body */}
         <path d="M100 75 L100 140" stroke="#1e293b" strokeWidth="4" strokeLinecap="round" />
-        {/* Left arm */}
-        <motion.path
-          d={peeking ? "M85 85 Q80 60 90 48" : "M85 85 Q75 100 75 120"}
-          stroke="#1e293b"
-          strokeWidth="4"
-          strokeLinecap="round"
-          animate={{ d: peeking ? "M85 85 Q80 60 90 48" : "M85 85 Q75 100 75 120" }}
+
+        {/* Left arm group */}
+        <motion.g
+          style={{ rotate: peeking ? -30 : 0, transformOrigin: '85px 85px' }}
           transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-        />
-        {/* Right arm */}
-        <motion.path
-          d={peeking ? "M115 85 Q120 60 110 48" : "M115 85 Q125 100 125 120"}
-          stroke="#1e293b"
-          strokeWidth="4"
-          strokeLinecap="round"
-          animate={{ d: peeking ? "M115 85 Q120 60 110 48" : "M115 85 Q125 100 125 120" }}
+        >
+          <path d="M85 85 Q75 100 75 120" stroke="#1e293b" strokeWidth="4" strokeLinecap="round" fill="none" />
+          <circle cx="75" cy="120" r="5" fill="#fbbf24" stroke="#1e293b" strokeWidth="2" />
+        </motion.g>
+
+        {/* Right arm group */}
+        <motion.g
+          style={{ rotate: peeking ? 30 : 0, transformOrigin: '115px 85px' }}
           transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-        />
-        {/* Left hand */}
-        <motion.circle
-          cx={peeking ? 90 : 75}
-          cy={peeking ? 48 : 120}
-          r={peeking ? 8 : 5}
-          fill="#fbbf24"
-          stroke="#1e293b"
-          strokeWidth="2"
-          animate={{ cx: peeking ? 90 : 75, cy: peeking ? 48 : 120, r: peeking ? 8 : 5 }}
-          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-        />
-        {/* Right hand */}
-        <motion.circle
-          cx={peeking ? 110 : 125}
-          cy={peeking ? 48 : 120}
-          r={peeking ? 8 : 5}
-          fill="#fbbf24"
-          stroke="#1e293b"
-          strokeWidth="2"
-          animate={{ cx: peeking ? 110 : 125, cy: peeking ? 48 : 120, r: peeking ? 8 : 5 }}
-          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-        />
+        >
+          <path d="M115 85 Q125 100 125 120" stroke="#1e293b" strokeWidth="4" strokeLinecap="round" fill="none" />
+          <circle cx="125" cy="120" r="5" fill="#fbbf24" stroke="#1e293b" strokeWidth="2" />
+        </motion.g>
+
         {/* Head */}
         <circle cx="100" cy="50" r="25" fill="white" stroke="#1e293b" strokeWidth="4" />
         {/* Eyes */}
         <ellipse cx="90" cy="48" rx="4" ry="5" fill="#1e293b" />
         <ellipse cx="110" cy="48" rx="4" ry="5" fill="#1e293b" />
+
         {/* Pupils (follow mouse) */}
-        <motion.circle cx={pupilLeftX} cy={pupilLeftY} r="1.5" fill="white" />
-        <motion.circle cx={pupilRightX} cy={pupilRightY} r="1.5" fill="white" />
+        <motion.g style={{ x: pupilLeftOffsetX, y: pupilLeftOffsetY }}>
+          <circle cx="90" cy="48" r="1.5" fill="white" />
+        </motion.g>
+        <motion.g style={{ x: pupilRightOffsetX, y: pupilRightOffsetY }}>
+          <circle cx="110" cy="48" r="1.5" fill="white" />
+        </motion.g>
+
         {/* Mouth */}
         <path d="M95 60 Q100 65 105 60" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
       </svg>
@@ -479,8 +456,114 @@ const SketchCharacter = ({ mouseX, mouseY, peeking }) => {
   );
 };
 
+
 /* =========================================================
-   BOOK A DEMO SECTION (new)
+   HERO VISUAL
+   ========================================================= */
+
+const HeroVisual = () => {
+  const cards = [
+    {
+      icon: Users,
+      title: 'Student cases',
+      value: '128',
+      detail: '+18% this month',
+      glow: 'blue',
+    },
+    {
+      icon: MessageCircle,
+      title: 'Conversations',
+      value: '42',
+      detail: '12 awaiting reply',
+      glow: 'violet',
+    },
+    {
+      icon: Shield,
+      title: 'Documents',
+      value: '96%',
+      detail: 'Secure & organized',
+      glow: 'cyan',
+    },
+  ];
+
+  return (
+    <Reveal delay={0.32}>
+      <div className="relative mx-auto mt-16 max-w-5xl">
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-3xl" />
+
+        <div className="relative grid gap-4 md:grid-cols-3">
+          {cards.map(({ icon: Icon, title, value, detail, glow }, index) => (
+            <motion.div
+              key={title}
+              initial={{ opacity: 0, y: 25 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.7,
+                delay: 0.35 + index * 0.12,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              whileHover={{ y: -8 }}
+            >
+              <SpotlightCard glow={glow} className="h-full">
+                <div className="p-6 text-left">
+                  <div className="flex items-center justify-between">
+                    <div className="grid h-11 w-11 place-items-center rounded-2xl bg-slate-950 text-white shadow-lg">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-slate-300" />
+                  </div>
+
+                  <p className="mt-7 text-sm font-semibold text-slate-500">{title}</p>
+                  <div className="mt-1 text-4xl font-semibold tracking-[-0.04em] text-slate-950">
+                    {value}
+                  </div>
+                  <p className="mt-2 text-xs font-medium text-blue-600">{detail}</p>
+
+                  <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${62 + index * 14}%` }}
+                      transition={{
+                        duration: 1.2,
+                        delay: 0.7 + index * 0.12,
+                        ease: [0.22, 1, 0.36, 1],
+                      }}
+                      className="h-full rounded-full bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-400"
+                    />
+                  </div>
+                </div>
+              </SpotlightCard>
+            </motion.div>
+          ))}
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.92 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.75 }}
+          className="mx-auto mt-5 flex max-w-md items-center justify-center gap-3 rounded-2xl border border-white/80 bg-white/70 px-5 py-3 shadow-lg backdrop-blur-xl"
+        >
+          <div className="flex -space-x-2">
+            {[1, 2, 3, 4].map((item) => (
+              <div
+                key={item}
+                className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-slate-200 text-[10px] font-bold text-slate-600"
+              >
+                {item}
+              </div>
+            ))}
+          </div>
+          <span className="text-xs font-semibold text-slate-600">
+            Everything your team needs, in one workspace.
+          </span>
+        </motion.div>
+      </div>
+    </Reveal>
+  );
+};
+
+/* =========================================================
+   BOOK A DEMO SECTION
    ========================================================= */
 
 const BookDemoSection = () => {
