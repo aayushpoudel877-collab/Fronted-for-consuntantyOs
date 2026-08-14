@@ -22,6 +22,7 @@ import {
   Lock,
   MessageCircle,
   MousePointer2,
+  Phone,
   Plane,
   Shield,
   Sparkles,
@@ -204,7 +205,6 @@ const BlurReveal = ({ children, delay = 0 }) => (
    TYPING COMPONENTS
    ========================================================= */
 
-// Hero Typewriter – loops through words
 const HeroTypewriter = ({ words, interval = 2600 }) => {
   const [index, setIndex] = useState(0);
   const [value, setValue] = useState('');
@@ -244,7 +244,6 @@ const HeroTypewriter = ({ words, interval = 2600 }) => {
   );
 };
 
-// Promise Typewriter – triggers on scroll and types line by line
 const PromiseTypewriter = ({ lines, delayBetweenLines = 600 }) => {
   const [displayed, setDisplayed] = useState('');
   const [lineIndex, setLineIndex] = useState(0);
@@ -283,11 +282,10 @@ const PromiseTypewriter = ({ lines, delayBetweenLines = 600 }) => {
       }, 25 + Math.random() * 20);
       return () => clearTimeout(timer);
     } else {
-      // Move to next line after a pause
       const timer = setTimeout(() => {
         setLineIndex(lineIndex + 1);
         setCharIndex(0);
-        setDisplayed((prev) => prev + '\n'); // add line break
+        setDisplayed((prev) => prev + '\n');
       }, delayBetweenLines);
       return () => clearTimeout(timer);
     }
@@ -309,10 +307,10 @@ const PromiseTypewriter = ({ lines, delayBetweenLines = 600 }) => {
 };
 
 /* =========================================================
-   MAGNETIC BUTTON & SPOTLIGHT CARD (unchanged)
+   MAGNETIC BUTTON & SPOTLIGHT CARD
    ========================================================= */
 
-const MagneticButton = ({ children, className = '', variant = 'primary', onClick }) => {
+const MagneticButton = ({ children, className = '', variant = 'primary', onClick, type = 'button' }) => {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const springX = useSpring(x, { stiffness: 280, damping: 18 });
@@ -331,7 +329,7 @@ const MagneticButton = ({ children, className = '', variant = 'primary', onClick
 
   return (
     <motion.button
-      type="button"
+      type={type}
       onClick={onClick}
       onMouseMove={handleMove}
       onMouseLeave={reset}
@@ -409,97 +407,246 @@ const SpotlightCard = ({ children, className = '', glow = 'blue', tilt = 6 }) =>
 };
 
 /* =========================================================
-   HERO VISUAL (dashboard mockup)
+   SKETCH CHARACTER (eyes follow mouse, body tilts, peeking reaction)
    ========================================================= */
 
-const HeroVisual = () => {
-  const icons = [
-    { Icon: Shield, label: 'Secure', orbit: 'left-[4%] top-[18%]' },
-    { Icon: Users, label: 'Students', orbit: 'right-[4%] top-[26%]' },
-    { Icon: MessageCircle, label: 'Messages', orbit: 'left-[12%] bottom-[18%]' },
-    { Icon: Globe, label: 'Global', orbit: 'right-[12%] bottom-[16%]' },
-  ];
+const SketchCharacter = ({ mouseX, mouseY, peeking }) => {
+  const rotateX = useTransform(mouseY, [-1, 1], [8, -8]);
+  const rotateY = useTransform(mouseX, [-1, 1], [-12, 12]);
+
+  const pupilLeftX = useTransform(mouseX, [-1, 1], [87, 93]);
+  const pupilLeftY = useTransform(mouseY, [-1, 1], [46, 50]);
+  const pupilRightX = useTransform(mouseX, [-1, 1], [107, 113]);
+  const pupilRightY = useTransform(mouseY, [-1, 1], [46, 50]);
 
   return (
-    <div className="relative mx-auto h-[320px] w-full md:h-[400px]">
-      <motion.div
-        animate={{ y: [0, -8, 0], rotate: [0, 1, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute left-1/2 top-1/2 w-[230px] -translate-x-1/2 -translate-y-1/2 md:w-[310px]"
-      >
-        <div className="relative rounded-[30px] border border-white/80 bg-white/90 p-4 shadow-[0_30px_90px_rgba(37,99,235,0.2)] backdrop-blur-2xl">
-          <div className="rounded-[23px] bg-gradient-to-br from-slate-950 via-blue-950 to-blue-800 p-5 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-[10px] uppercase tracking-[0.22em] text-white/45">ConsultancyOS</div>
-                <div className="mt-1 text-lg font-semibold">Control Center</div>
-              </div>
-              <div className="rounded-xl bg-white/10 p-2">
-                <Layers3 className="h-4 w-4" />
-              </div>
-            </div>
+    <motion.div style={{ rotateX, rotateY, transformPerspective: 800 }} className="w-full h-full">
+      <svg viewBox="0 0 200 200" fill="none" className="w-full h-full">
+        {/* Body */}
+        <path d="M100 75 L100 140" stroke="#1e293b" strokeWidth="4" strokeLinecap="round" />
+        {/* Left arm */}
+        <motion.path
+          d={peeking ? "M85 85 Q80 60 90 48" : "M85 85 Q75 100 75 120"}
+          stroke="#1e293b"
+          strokeWidth="4"
+          strokeLinecap="round"
+          animate={{ d: peeking ? "M85 85 Q80 60 90 48" : "M85 85 Q75 100 75 120" }}
+          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+        />
+        {/* Right arm */}
+        <motion.path
+          d={peeking ? "M115 85 Q120 60 110 48" : "M115 85 Q125 100 125 120"}
+          stroke="#1e293b"
+          strokeWidth="4"
+          strokeLinecap="round"
+          animate={{ d: peeking ? "M115 85 Q120 60 110 48" : "M115 85 Q125 100 125 120" }}
+          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+        />
+        {/* Left hand */}
+        <motion.circle
+          cx={peeking ? 90 : 75}
+          cy={peeking ? 48 : 120}
+          r={peeking ? 8 : 5}
+          fill="#fbbf24"
+          stroke="#1e293b"
+          strokeWidth="2"
+          animate={{ cx: peeking ? 90 : 75, cy: peeking ? 48 : 120, r: peeking ? 8 : 5 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+        />
+        {/* Right hand */}
+        <motion.circle
+          cx={peeking ? 110 : 125}
+          cy={peeking ? 48 : 120}
+          r={peeking ? 8 : 5}
+          fill="#fbbf24"
+          stroke="#1e293b"
+          strokeWidth="2"
+          animate={{ cx: peeking ? 110 : 125, cy: peeking ? 48 : 120, r: peeking ? 8 : 5 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+        />
+        {/* Head */}
+        <circle cx="100" cy="50" r="25" fill="white" stroke="#1e293b" strokeWidth="4" />
+        {/* Eyes */}
+        <ellipse cx="90" cy="48" rx="4" ry="5" fill="#1e293b" />
+        <ellipse cx="110" cy="48" rx="4" ry="5" fill="#1e293b" />
+        {/* Pupils (follow mouse) */}
+        <motion.circle cx={pupilLeftX} cy={pupilLeftY} r="1.5" fill="white" />
+        <motion.circle cx={pupilRightX} cy={pupilRightY} r="1.5" fill="white" />
+        {/* Mouth */}
+        <path d="M95 60 Q100 65 105 60" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    </motion.div>
+  );
+};
 
-            <div className="mt-6 grid grid-cols-3 gap-2">
-              {['128', '94%', '24'].map((value, i) => (
-                <motion.div
-                  key={value}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.35 + i * 0.08 }}
-                  className="rounded-2xl border border-white/10 bg-white/[0.07] p-3"
-                >
-                  <div className="text-lg font-bold">{value}</div>
-                  <div className="mt-1 text-[8px] uppercase tracking-wider text-white/45">
-                    {['cases', 'reply rate', 'tasks'][i]}
+/* =========================================================
+   BOOK A DEMO SECTION (new)
+   ========================================================= */
+
+const BookDemoSection = () => {
+  const [formData, setFormData] = useState({
+    name: '',
+    address: '',
+    organization: '',
+    contact: '',
+  });
+  const [submitted, setSubmitted] = useState(false);
+  const [contactFocused, setContactFocused] = useState(false);
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const characterRef = useRef(null);
+
+  const handleMouseMove = (e) => {
+    if (!characterRef.current) return;
+    const rect = characterRef.current.getBoundingClientRect();
+    const nx = (e.clientX - rect.left - rect.width / 2) / (rect.width / 2);
+    const ny = (e.clientY - rect.top - rect.height / 2) / (rect.height / 2);
+    mouseX.set(Math.max(-1, Math.min(1, nx)));
+    mouseY.set(Math.max(-1, Math.min(1, ny)));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setSubmitted(true);
+  };
+
+  const handleChange = (e) => {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  return (
+    <section
+      id="book-demo"
+      className="relative z-10 px-6 py-16 md:py-24"
+      onMouseMove={handleMouseMove}
+    >
+      <div className="mx-auto max-w-6xl">
+        <Reveal>
+          <div className="mb-12 text-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/80 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">
+              <Sparkles className="h-3.5 w-3.5" />
+              Book a demo
+            </div>
+            <h2 className="mt-5 text-4xl font-semibold tracking-[-0.04em] text-slate-950 md:text-5xl">
+              Let's build something great together
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-slate-600">
+              Fill out the form and we'll get back to you. Or reach out directly.
+            </p>
+          </div>
+        </Reveal>
+
+        <div className="grid items-center gap-10 md:grid-cols-2">
+          {/* Form */}
+          <Reveal delay={0.1}>
+            <SpotlightCard glow="blue" className="h-full">
+              <div className="p-8">
+                {submitted ? (
+                  <div className="py-10 text-center">
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+                      className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green-50 text-green-600"
+                    >
+                      <Check className="h-8 w-8" />
+                    </motion.div>
+                    <h3 className="mt-4 text-2xl font-semibold text-slate-950">Request received ✓</h3>
+                    <p className="mt-2 text-sm text-slate-500">We'll reach out shortly.</p>
                   </div>
-                </motion.div>
-              ))}
-            </div>
-
-            <div className="mt-3 h-16 rounded-2xl border border-white/10 bg-white/[0.05] p-3">
-              <div className="flex items-end gap-1.5">
-                {[30, 45, 35, 62, 48, 75, 68, 90, 77, 100].map((h, i) => (
-                  <motion.span
-                    key={i}
-                    initial={{ height: 6 }}
-                    animate={{ height: `${h}%` }}
-                    transition={{ delay: 0.55 + i * 0.05, duration: 0.7, ease: 'easeOut' }}
-                    className="flex-1 rounded-full bg-gradient-to-t from-sky-400 to-violet-400"
-                  />
-                ))}
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    <div>
+                      <label htmlFor="name" className="block text-sm font-semibold text-slate-700">Name</label>
+                      <input
+                        id="name"
+                        name="name"
+                        type="text"
+                        required
+                        value={formData.name}
+                        onChange={handleChange}
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                        placeholder="Your full name"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="address" className="block text-sm font-semibold text-slate-700">Address</label>
+                      <input
+                        id="address"
+                        name="address"
+                        type="text"
+                        required
+                        value={formData.address}
+                        onChange={handleChange}
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                        placeholder="City, Country"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="organization" className="block text-sm font-semibold text-slate-700">Organization Name</label>
+                      <input
+                        id="organization"
+                        name="organization"
+                        type="text"
+                        required
+                        value={formData.organization}
+                        onChange={handleChange}
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                        placeholder="Your consultancy name"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="contact" className="block text-sm font-semibold text-slate-700">Contact Number</label>
+                      <input
+                        id="contact"
+                        name="contact"
+                        type="tel"
+                        required
+                        value={formData.contact}
+                        onChange={handleChange}
+                        onFocus={() => setContactFocused(true)}
+                        onBlur={() => setContactFocused(false)}
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                        placeholder="+91 98765 43210"
+                      />
+                    </div>
+                    <div className="pt-2">
+                      <MagneticButton type="submit" className="w-full">
+                        Book a demo
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </MagneticButton>
+                    </div>
+                  </form>
+                )}
               </div>
+            </SpotlightCard>
+          </Reveal>
+
+          {/* Character */}
+          <Reveal delay={0.2} className="flex justify-center">
+            <div ref={characterRef} className="relative h-72 w-72 md:h-96 md:w-96">
+              <SketchCharacter mouseX={mouseX} mouseY={mouseY} peeking={contactFocused} />
             </div>
-          </div>
+          </Reveal>
         </div>
-      </motion.div>
 
-      {icons.map(({ Icon, label, orbit }, index) => (
-        <motion.div
-          key={label}
-          animate={{ y: [0, index % 2 ? -10 : 10, 0] }}
-          transition={{
-            duration: 4.5 + index * 0.45,
-            repeat: Infinity,
-            ease: 'easeInOut',
-            delay: index * 0.25,
-          }}
-          className={cn('absolute hidden md:block', orbit)}
-        >
-          <div className="flex items-center gap-2 rounded-full border border-white/90 bg-white/85 px-3 py-2 text-[10px] font-semibold text-slate-700 shadow-[0_16px_40px_rgba(15,23,42,0.09)] backdrop-blur-xl">
-            <span className="grid h-7 w-7 place-items-center rounded-full bg-blue-50 text-blue-700">
-              <Icon className="h-3.5 w-3.5" />
-            </span>
-            {label}
+        {/* Contact info */}
+        <Reveal delay={0.15}>
+          <div className="mt-10 text-center">
+            <p className="text-sm text-slate-500">
+              Or contact <span className="font-semibold text-slate-700">Yogesh Luitle</span> — Product Manager / Founder
+            </p>
+            <a
+              href="tel:9767223140"
+              className="mt-2 inline-flex items-center gap-2 text-lg font-semibold text-blue-700 transition hover:text-blue-900"
+            >
+              <Phone className="h-5 w-5" />
+              9767223140
+            </a>
           </div>
-        </motion.div>
-      ))}
-
-      <motion.div
-        animate={{ scale: [0.95, 1.05, 0.95], opacity: [0.3, 0.5, 0.3] }}
-        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute left-1/2 top-1/2 -z-10 h-[280px] w-[280px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/20 blur-[70px]"
-      />
-    </div>
+        </Reveal>
+      </div>
+    </section>
   );
 };
 
@@ -511,6 +658,10 @@ const ConsultancyOSPremium = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { scrollYProgress } = useScroll();
   const progressScale = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
+
+  const scrollToBookDemo = () => {
+    document.getElementById('book-demo')?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const menu = [
     ['Features', '#features'],
@@ -530,6 +681,7 @@ const ConsultancyOSPremium = () => {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#F7F8FC] font-sans text-slate-900 selection:bg-slate-950 selection:text-white">
+      <style>{`html { scroll-behavior: smooth; }`}</style>
       <InteractiveParticleNetwork />
 
       {/* Scroll progress */}
@@ -580,7 +732,11 @@ const ConsultancyOSPremium = () => {
             <a href="#login" className="text-xs font-semibold text-slate-500 transition hover:text-slate-950">
               Log in
             </a>
-            <MagneticButton variant="primary" className="rounded-xl px-4 py-2.5 text-xs">
+            <MagneticButton
+              variant="primary"
+              className="rounded-xl px-4 py-2.5 text-xs"
+              onClick={scrollToBookDemo}
+            >
               Book a demo
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             </MagneticButton>
@@ -615,8 +771,12 @@ const ConsultancyOSPremium = () => {
                 </a>
               ))}
               <a
-                href="#login"
-                onClick={() => setMobileOpen(false)}
+                href="#book-demo"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setMobileOpen(false);
+                  scrollToBookDemo();
+                }}
                 className="mt-1 rounded-xl bg-slate-950 px-3 py-3 text-center text-sm font-semibold text-white"
               >
                 Book a demo
@@ -657,11 +817,11 @@ const ConsultancyOSPremium = () => {
 
           <Reveal delay={0.24}>
             <div className="mt-9 flex flex-wrap justify-center gap-3">
-              <MagneticButton>
+              <MagneticButton onClick={scrollToBookDemo}>
                 Book a demo
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </MagneticButton>
-              <MagneticButton variant="light">
+              <MagneticButton variant="light" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
                 Explore features
                 <MousePointer2 className="h-4 w-4" />
               </MagneticButton>
@@ -847,7 +1007,11 @@ const ConsultancyOSPremium = () => {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <MagneticButton variant="primary" className="bg-blue-600 shadow-[0_16px_35px_rgba(0,0,0,0.18)] hover:bg-blue-700">
+                <MagneticButton
+                  variant="primary"
+                  className="bg-blue-600 shadow-[0_16px_35px_rgba(0,0,0,0.18)] hover:bg-blue-700"
+                  onClick={scrollToBookDemo}
+                >
                   Book a demo
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </MagneticButton>
@@ -859,6 +1023,9 @@ const ConsultancyOSPremium = () => {
           </motion.div>
         </div>
       </section>
+
+      {/* New Book a Demo Section */}
+      <BookDemoSection />
 
       {/* Anchor sections */}
       <section id="solutions" className="h-8" aria-hidden="true" />
