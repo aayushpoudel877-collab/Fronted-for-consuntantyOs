@@ -842,7 +842,7 @@ const VisaSteps = () => {
               whileHover={{ rotate: 10, scale: 1.05 }}
               className="grid h-9 w-9 place-items-center rounded-xl bg-slate-950 text-white shadow-lg"
             >
-              <span className="text-sm font-bold">V</span>
+              <span className="text-sm font-bold">VS</span>
             </motion.div>
             <span className="text-base font-bold tracking-tight text-slate-950">
               Consultancy<span className="text-blue-700">OS</span>
