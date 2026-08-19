@@ -845,7 +845,7 @@ const VisaSteps = () => {
               <span className="text-sm font-bold">VS</span>
             </motion.div>
             <span className="text-base font-bold tracking-tight text-slate-950">
-              Consultancy<span className="text-blue-700">OS</span>
+              Visa<span className="text-blue-700">Steps</span>
             </span>
           </a>
 
