@@ -291,7 +291,7 @@ const PromiseTypewriter = ({ lines, delayBetweenLines = 600 }) => {
         )}
       </span>
       {!hasStarted && (
-        <span className="text-4xl md:text-5xl text-slate-300">Built for consultancies<br />that care about<br />student experience.</span>
+        <span className="text-4xl md:text-5xl text-slate-300">Built for student-focused teams<br />that care about<br />student experience.</span>
       )}
     </div>
   );
@@ -401,7 +401,7 @@ const SpotlightCard = ({ children, className = '', glow = 'blue', tilt = 6 }) =>
    SKETCH CHARACTER (eyes follow mouse, body tilts, peeking reaction)
    ========================================================= */
 
-const SketchCharacter = ({ mouseX, mouseY, peeking }) => {
+const SketchCharacter = ({ mouseX, mouseY, peeking, contact }) => {
   const rotateX = useTransform(mouseY, [-1, 1], [8, -8]);
   const rotateY = useTransform(mouseX, [-1, 1], [-12, 12]);
 
@@ -426,13 +426,54 @@ const SketchCharacter = ({ mouseX, mouseY, peeking }) => {
           <circle cx="75" cy="120" r="5" fill="#fbbf24" stroke="#1e293b" strokeWidth="2" />
         </motion.g>
 
-        {/* Right arm group */}
+        {/* Right arm — lifts the phone when the contact field is active */}
         <motion.g
-          style={{ rotate: peeking ? 30 : 0, transformOrigin: '115px 85px' }}
-          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+          animate={{
+            rotate: peeking ? 8 : 0,
+            x: peeking ? 2 : 0,
+            y: peeking ? 2 : 0,
+          }}
+          transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+          style={{ transformOrigin: '115px 85px' }}
         >
-          <path d="M115 85 Q125 100 125 120" stroke="#1e293b" strokeWidth="4" strokeLinecap="round" fill="none" />
-          <circle cx="125" cy="120" r="5" fill="#fbbf24" stroke="#1e293b" strokeWidth="2" />
+          <path
+            d={peeking ? 'M115 85 Q126 94 132 103' : 'M115 85 Q125 100 125 120'}
+            stroke="#1e293b"
+            strokeWidth="4"
+            strokeLinecap="round"
+            fill="none"
+          />
+          <circle
+            cx={peeking ? 132 : 125}
+            cy={peeking ? 103 : 120}
+            r="5"
+            fill="#fbbf24"
+            stroke="#1e293b"
+            strokeWidth="2"
+          />
+
+          {peeking && (
+            <motion.g
+              initial={{ opacity: 0, scale: 0.8, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+              style={{ transformOrigin: '143px 96px' }}
+            >
+              <rect x="132" y="72" width="23" height="40" rx="4" fill="#0f172a" stroke="#334155" strokeWidth="2" />
+              <rect x="135" y="76" width="17" height="30" rx="2.5" fill="#f8fafc" />
+              <circle cx="143.5" cy="109" r="1.5" fill="#64748b" />
+              <text
+                x="143.5"
+                y="91"
+                textAnchor="middle"
+                fontSize="3.4"
+                fontWeight="600"
+                fill="#2563eb"
+              >
+                {contact || 'MOBILE'}
+              </text>
+            </motion.g>
+          )}
         </motion.g>
 
         {/* Head */}
@@ -594,7 +635,15 @@ const BookDemoSection = () => {
   };
 
   const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+
+    if (name === 'contact') {
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
+      setFormData((prev) => ({ ...prev, contact: digitsOnly }));
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   return (
@@ -675,7 +724,7 @@ const BookDemoSection = () => {
                         value={formData.organization}
                         onChange={handleChange}
                         className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                        placeholder="Your consultancy name"
+                        placeholder="Your organization name"
                       />
                     </div>
                     <div>
@@ -684,13 +733,17 @@ const BookDemoSection = () => {
                         id="contact"
                         name="contact"
                         type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]{10}"
+                        maxLength={10}
+                        minLength={10}
                         required
                         value={formData.contact}
                         onChange={handleChange}
                         onFocus={() => setContactFocused(true)}
                         onBlur={() => setContactFocused(false)}
                         className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                        placeholder="+91 98765 43210"
+                        placeholder="Enter 10-digit mobile number"
                       />
                     </div>
                     <div className="pt-2">
@@ -708,7 +761,7 @@ const BookDemoSection = () => {
           {/* Character */}
           <Reveal delay={0.2} className="flex justify-center">
             <div ref={characterRef} className="relative h-72 w-72 md:h-96 md:w-96">
-              <SketchCharacter mouseX={mouseX} mouseY={mouseY} peeking={contactFocused} />
+              <SketchCharacter mouseX={mouseX} mouseY={mouseY} peeking={contactFocused} contact={formData.contact} />
             </div>
           </Reveal>
         </div>
@@ -737,7 +790,7 @@ const BookDemoSection = () => {
    MAIN PAGE
    ========================================================= */
 
-const ConsultancyOSPremium = () => {
+const VisaSteps = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { scrollYProgress } = useScroll();
   const progressScale = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
@@ -789,7 +842,7 @@ const ConsultancyOSPremium = () => {
               whileHover={{ rotate: 10, scale: 1.05 }}
               className="grid h-9 w-9 place-items-center rounded-xl bg-slate-950 text-white shadow-lg"
             >
-              <span className="text-sm font-bold">C</span>
+              <span className="text-sm font-bold">V</span>
             </motion.div>
             <span className="text-base font-bold tracking-tight text-slate-950">
               Consultancy<span className="text-blue-700">OS</span>
@@ -875,7 +928,7 @@ const ConsultancyOSPremium = () => {
           <Reveal>
             <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-600 shadow-sm backdrop-blur-xl">
               <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-              All-in-one platform for education consultancies
+              All-in-one platform for student applications
             </div>
           </Reveal>
 
@@ -921,7 +974,7 @@ const ConsultancyOSPremium = () => {
           <div className="grid gap-4 md:grid-cols-3">
             {[
               { icon: Shield, title: 'Secure & reliable', desc: 'Your data and your students’ trust are protected.' },
-              { icon: Users, title: 'Built for education experts', desc: 'Designed by consultants, for consultants.' },
+              { icon: Users, title: 'Built for education teams', desc: 'Designed for teams, for better student support.' },
               { icon: Heart, title: 'Student experience first', desc: 'Every feature is crafted to support the human journey.' },
             ].map(({ icon: Icon, title, desc }, index) => (
               <Reveal key={title} delay={index * 0.08}>
@@ -958,7 +1011,7 @@ const ConsultancyOSPremium = () => {
                 <div className="mt-5 max-w-md">
                   <PromiseTypewriter
                     lines={[
-                      'Built for consultancies',
+                      'Built for student-focused teams',
                       'that care about',
                       'student experience.',
                     ]}
@@ -967,7 +1020,7 @@ const ConsultancyOSPremium = () => {
                 </div>
                 <Reveal delay={0.3}>
                   <p className="mt-6 max-w-sm text-sm leading-6 text-slate-600">
-                    ConsultancyOS helps you stay organized, respond faster, and guide every student
+                    Visa Steps helps you stay organized, respond faster, and guide every student
                     journey with confidence and care.
                   </p>
                 </Reveal>
@@ -1007,12 +1060,12 @@ const ConsultancyOSPremium = () => {
             </motion.div>
             <BlurReveal>
               <h2 className="text-4xl font-semibold leading-[1.05] tracking-[-0.04em] text-slate-950 md:text-6xl">
-                Everything you need to run a smooth consultancy.
+                Everything you need to keep applications moving.
               </h2>
             </BlurReveal>
             <Reveal delay={0.08}>
               <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 md:text-lg">
-                Centralize, communicate, and protect—all in one polished workspace.
+                Keep applications, documents, and communication organized in one place.
               </p>
             </Reveal>
           </div>
@@ -1082,7 +1135,7 @@ const ConsultancyOSPremium = () => {
                 <h2 className="max-w-lg text-3xl font-semibold leading-[1.04] tracking-[-0.035em] text-white sm:text-4xl">
                   Ready to bring more clarity
                   <br />
-                  to your consultancy?
+                  to your student support?
                 </h2>
                 <p className="mt-3 text-sm leading-5 text-white/70">
                   Let's build better outcomes for your students—together.
@@ -1120,11 +1173,11 @@ const ConsultancyOSPremium = () => {
       <footer className="relative z-10 border-t border-slate-200/80 bg-white/55 px-6 py-8 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 text-center md:flex-row md:items-center md:justify-between md:text-left">
           <div>
-            <div className="text-sm font-bold text-slate-950">ConsultancyOS</div>
-            <div className="mt-1 text-xs text-slate-400">Premium edition – built for clarity and confidence.</div>
+            <div className="text-sm font-bold text-slate-950">Visa Steps</div>
+            <div className="mt-1 text-xs text-slate-400">Simple tools for clearer student journeys.</div>
           </div>
           <div className="text-xs text-slate-400">
-            © {new Date().getFullYear()} ConsultancyOS · All rights reserved.
+            © {new Date().getFullYear()} Visa Steps · All rights reserved.
           </div>
         </div>
       </footer>
@@ -1132,4 +1185,4 @@ const ConsultancyOSPremium = () => {
   );
 };
 
-export default ConsultancyOSPremium;
+export default VisaSteps;
