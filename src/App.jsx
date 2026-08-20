@@ -742,7 +742,7 @@ const BookDemoSection = () => {
                         onChange={handleChange}
                         onFocus={() => setContactFocused(true)}
                         onBlur={() => setContactFocused(false)}
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-xs md:text-sm text-slate-900 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                         placeholder="Enter 10-digit mobile number"
                       />
                     </div>
