@@ -792,6 +792,10 @@ const BookDemoSection = () => {
 
 const VisaSteps = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    document.title = 'VisaSteps — Student Consultancy Platform';
+  }, []);
   const { scrollYProgress } = useScroll();
   const progressScale = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
 
@@ -1070,45 +1074,113 @@ const VisaSteps = () => {
             </Reveal>
           </div>
 
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
+          <div className="mt-12 grid gap-5 md:grid-cols-3 [perspective:1400px]">
             {[
               {
                 icon: Users,
                 title: 'Stay organized',
                 desc: 'Centralize student cases and documents so nothing falls through the cracks.',
                 glow: 'blue',
+                accent: 'from-blue-500 via-cyan-400 to-blue-600',
+                metric: '01',
               },
               {
                 icon: Sparkles,
                 title: 'Communicate with ease',
                 desc: 'Keep every conversation in one place and respond faster.',
                 glow: 'violet',
+                accent: 'from-violet-500 via-fuchsia-400 to-blue-500',
+                metric: '02',
               },
               {
                 icon: Shield,
                 title: 'Work with confidence',
                 desc: 'Protect data, maintain compliance, and build trust with every interaction.',
                 glow: 'cyan',
+                accent: 'from-cyan-400 via-blue-500 to-violet-500',
+                metric: '03',
               },
-            ].map(({ icon: Icon, title, desc, glow }, index) => (
-              <Reveal key={title} delay={index * 0.08}>
-                <SpotlightCard glow={glow} className="h-full min-h-[280px]">
-                  <div className="flex h-full flex-col items-center justify-center p-7 text-center">
-                    <motion.div
-                      whileHover={{ rotate: 10, scale: 1.08 }}
-                      className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-950 text-white shadow-lg"
-                    >
-                      <Icon className="h-5 w-5" />
-                    </motion.div>
-                    <h3 className="mt-6 text-2xl font-semibold tracking-[-0.03em] text-slate-950">{title}</h3>
-                    <p className="mt-3 max-w-xs text-sm leading-6 text-slate-500">{desc}</p>
-                    <motion.div
-                      initial={{ scaleX: 0 }}
-                      whileHover={{ scaleX: 1 }}
-                      className="absolute bottom-0 h-[2px] w-14 origin-center bg-gradient-to-r from-blue-500 to-violet-500"
-                    />
-                  </div>
-                </SpotlightCard>
+            ].map(({ icon: Icon, title, desc, glow, accent, metric }, index) => (
+              <Reveal key={title} delay={index * 0.1} y={42}>
+                <motion.div
+                  initial={{ opacity: 0, rotateX: 12, y: 18 }}
+                  whileInView={{ opacity: 1, rotateX: 0, y: 0 }}
+                  viewport={{ once: true, margin: '-70px' }}
+                  transition={{ duration: 0.8, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                  whileHover={{ y: -12, rotateX: 2, transition: { duration: 0.35 } }}
+                  className="group relative h-full"
+                  style={{ transformStyle: 'preserve-3d' }}
+                >
+                  <SpotlightCard glow={glow} className="h-full min-h-[300px]">
+                    <div className="relative flex h-full flex-col overflow-hidden p-7">
+                      <motion.div
+                        animate={{ x: ['-120%', '220%'] }}
+                        transition={{ duration: 5.5, repeat: Infinity, repeatDelay: 2.5, ease: 'easeInOut' }}
+                        className="pointer-events-none absolute top-0 h-full w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/45 to-transparent opacity-0 blur-xl transition-opacity duration-500 group-hover:opacity-100"
+                      />
+
+                      <motion.div
+                        animate={{ y: [0, -9, 0], scale: [1, 1.04, 1] }}
+                        transition={{ duration: 4 + index, repeat: Infinity, ease: 'easeInOut' }}
+                        className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-gradient-to-br from-blue-400/20 via-violet-400/10 to-transparent blur-2xl"
+                      />
+
+                      <div className="relative z-20 flex items-start justify-between">
+                        <motion.div
+                          whileHover={{ rotate: 8, scale: 1.1 }}
+                          transition={{ type: 'spring', stiffness: 300, damping: 16 }}
+                          className="relative grid h-14 w-14 place-items-center rounded-2xl bg-slate-950 text-white shadow-[0_12px_30px_rgba(15,23,42,0.18)]"
+                        >
+                          <motion.div
+                            animate={{ scale: [1, 1.18, 1], opacity: [0.35, 0.08, 0.35] }}
+                            transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+                            className="absolute inset-0 rounded-2xl bg-blue-500 blur-md"
+                          />
+                          <Icon className="relative z-10 h-5 w-5" />
+                        </motion.div>
+
+                        <motion.span
+                          initial={{ opacity: 0.35 }}
+                          whileHover={{ opacity: 1, scale: 1.08 }}
+                          className="text-[10px] font-bold tracking-[0.22em] text-slate-300"
+                        >
+                          {metric}
+                        </motion.span>
+                      </div>
+
+                      <div className="relative z-20 mt-auto">
+                        <div className="mb-4 h-px w-10 overflow-hidden bg-slate-200">
+                          <motion.div
+                            initial={{ x: '-100%' }}
+                            whileInView={{ x: '0%' }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.9, delay: 0.25 + index * 0.1 }}
+                            className={`h-full w-full bg-gradient-to-r ${accent}`}
+                          />
+                        </div>
+
+                        <h3 className="text-2xl font-semibold tracking-[-0.035em] text-slate-950 transition-transform duration-300 group-hover:translate-x-1">
+                          {title}
+                        </h3>
+                        <p className="mt-3 max-w-xs text-sm leading-6 text-slate-500">
+                          {desc}
+                        </p>
+
+                        <div className="mt-6 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400 transition-colors duration-300 group-hover:text-blue-600">
+                          Explore capability
+                          <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1.5" />
+                        </div>
+                      </div>
+
+                      <motion.div
+                        initial={{ scaleX: 0 }}
+                        whileHover={{ scaleX: 1 }}
+                        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                        className={`absolute bottom-0 left-0 right-0 h-[3px] origin-left bg-gradient-to-r ${accent}`}
+                      />
+                    </div>
+                  </SpotlightCard>
+                </motion.div>
               </Reveal>
             ))}
           </div>
