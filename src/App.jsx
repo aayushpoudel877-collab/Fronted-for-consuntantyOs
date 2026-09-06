@@ -6,36 +6,103 @@ import {
   useScroll,
   useSpring,
   useTransform,
+  AnimatePresence,
 } from 'framer-motion';
 import {
   ArrowRight,
   Check,
   ChevronDown,
   Heart,
-  Layers3,
   MessageCircle,
   MousePointer2,
   Phone,
   Shield,
   Sparkles,
   Users,
-  Globe,
 } from 'lucide-react';
-
-/* =========================================================
-   PREMIUM DESIGN SYSTEM
-   ========================================================= */
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
 /* =========================================================
-   INTERACTIVE AMBIENT BACKGROUND (unchanged)
+   SCROLL-REACTIVE AURORA BACKGROUND
+   ========================================================= */
+
+const ScrollReactiveAurora = () => {
+  const { scrollYProgress } = useScroll();
+  const canvasRef = useRef(null);
+  const rafRef = useRef();
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let width = 0;
+    let height = 0;
+
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    const animate = (time) => {
+      const scrollVal = scrollYProgress.get();
+      const hueShift = scrollVal * 60;
+      ctx.clearRect(0, 0, width, height);
+
+      const blobs = [
+        { x: 0.2, y: 0.3, r: 300, hue: 220 + hueShift, speed: 0.0004 },
+        { x: 0.7, y: 0.5, r: 250, hue: 270 + hueShift, speed: 0.0003 },
+        { x: 0.5, y: 0.7, r: 280, hue: 190 + hueShift, speed: 0.00035 },
+      ];
+
+      blobs.forEach((blob) => {
+        const bx = width * blob.x + Math.sin(time * blob.speed) * 80;
+        const by = height * blob.y + Math.cos(time * blob.speed * 0.7) * 60;
+        const gradient = ctx.createRadialGradient(bx, by, 0, bx, by, blob.r);
+        gradient.addColorStop(0, `hsla(${blob.hue}, 80%, 60%, 0.08)`);
+        gradient.addColorStop(0.5, `hsla(${blob.hue}, 70%, 55%, 0.03)`);
+        gradient.addColorStop(1, `hsla(${blob.hue}, 70%, 55%, 0)`);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+      });
+
+      rafRef.current = requestAnimationFrame(animate);
+    };
+
+    resize();
+    window.addEventListener('resize', resize);
+    rafRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      window.removeEventListener('resize', resize);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [scrollYProgress]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 z-0 pointer-events-none"
+      aria-hidden="true"
+    />
+  );
+};
+
+/* =========================================================
+   INTERACTIVE PARTICLE NETWORK
    ========================================================= */
 
 const InteractiveParticleNetwork = () => {
   const canvasRef = useRef(null);
   const mouseRef = useRef({ x: -9999, y: -9999 });
   const rafRef = useRef();
+  const { scrollYProgress } = useScroll();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -65,8 +132,9 @@ const InteractiveParticleNetwork = () => {
         this.vy = (Math.random() - 0.5) * 0.35;
         this.r = Math.random() * 2 + 0.7;
         this.phase = Math.random() * Math.PI * 2;
+        this.baseAlpha = Math.random() * 0.3 + 0.15;
       }
-      update(t) {
+      update(t, scrollProgress) {
         this.x += this.vx + Math.cos(t * 0.0003 + this.phase) * 0.04;
         this.y += this.vy + Math.sin(t * 0.00025 + this.phase) * 0.04;
 
@@ -78,22 +146,23 @@ const InteractiveParticleNetwork = () => {
         const dx = this.x - mouseRef.current.x;
         const dy = this.y - mouseRef.current.y;
         const distance = Math.hypot(dx, dy);
-        if (distance < 130 && distance > 0) {
-          const force = (130 - distance) / 130;
-          this.x += (dx / distance) * force * 3.2;
-          this.y += (dy / distance) * force * 3.2;
+        if (distance < 150 && distance > 0) {
+          const force = (150 - distance) / 150;
+          this.x += (dx / distance) * force * 3.5;
+          this.y += (dy / distance) * force * 3.5;
         }
       }
-      draw() {
+      draw(scrollProgress) {
+        const alpha = this.baseAlpha + scrollProgress * 0.15;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(37,99,235,0.32)';
+        ctx.fillStyle = `rgba(37,99,235,${alpha})`;
         ctx.fill();
       }
     }
 
     const init = () => {
-      const count = Math.min(95, Math.max(48, Math.floor(window.innerWidth / 14)));
+      const count = Math.min(100, Math.max(50, Math.floor(window.innerWidth / 13)));
       particles = Array.from({ length: count }, () => new Particle());
     };
 
@@ -106,11 +175,12 @@ const InteractiveParticleNetwork = () => {
     };
 
     const animate = (time) => {
+      const scrollProgress = scrollYProgress.get();
       ctx.clearRect(0, 0, width, height);
 
       particles.forEach((p) => {
-        p.update(time);
-        p.draw();
+        p.update(time, scrollProgress);
+        p.draw(scrollProgress);
       });
 
       for (let i = 0; i < particles.length; i += 1) {
@@ -118,21 +188,22 @@ const InteractiveParticleNetwork = () => {
           const a = particles[i];
           const b = particles[j];
           const distance = Math.hypot(a.x - b.x, a.y - b.y);
+          const maxDist = 155 + scrollProgress * 30;
 
-          if (distance < 155) {
-            const opacity = (1 - distance / 155) * 0.34;
+          if (distance < maxDist) {
+            const opacity = (1 - distance / maxDist) * (0.34 + scrollProgress * 0.15);
             const mx = (a.x + b.x) / 2;
             const my = (a.y + b.y) / 2;
             const mouseDistance = Math.hypot(mx - mouseRef.current.x, my - mouseRef.current.y);
-            const hot = mouseDistance < 100;
+            const hot = mouseDistance < 120;
 
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
             ctx.strokeStyle = hot
-              ? `rgba(124,58,237,${Math.min(0.8, opacity * 3)})`
+              ? `rgba(124,58,237,${Math.min(0.85, opacity * 3)})`
               : `rgba(37,99,235,${opacity})`;
-            ctx.lineWidth = hot ? 1.6 : 0.6;
+            ctx.lineWidth = hot ? 1.8 : 0.6;
             ctx.stroke();
           }
         }
@@ -154,12 +225,12 @@ const InteractiveParticleNetwork = () => {
       window.removeEventListener('mouseleave', onLeave);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, []);
+  }, [scrollYProgress]);
 
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 z-0 pointer-events-none opacity-90"
+      className="fixed inset-0 z-[1] pointer-events-none opacity-90"
       aria-hidden="true"
     />
   );
@@ -230,7 +301,11 @@ const HeroTypewriter = ({ words, interval = 2600 }) => {
   return (
     <span className="relative inline-block min-w-[8ch] bg-gradient-to-r from-blue-700 via-violet-600 to-cyan-500 bg-clip-text text-transparent">
       {value}
-      <span className="ml-0.5 inline-block h-[0.9em] w-[2px] translate-y-[0.08em] animate-pulse bg-blue-600" />
+      <motion.span
+        animate={{ opacity: [1, 0] }}
+        transition={{ duration: 0.6, repeat: Infinity, repeatType: 'reverse' }}
+        className="ml-0.5 inline-block h-[0.9em] w-[2px] translate-y-[0.08em] bg-blue-600"
+      />
     </span>
   );
 };
@@ -246,15 +321,11 @@ const PromiseTypewriter = ({ lines, delayBetweenLines = 600 }) => {
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !hasStarted) {
-          setHasStarted(true);
-        }
+        if (entry.isIntersecting && !hasStarted) setHasStarted(true);
       },
       { threshold: 0.3 }
     );
-
     if (ref.current) observer.observe(ref.current);
-
     return () => observer.disconnect();
   }, [hasStarted]);
 
@@ -287,11 +358,17 @@ const PromiseTypewriter = ({ lines, delayBetweenLines = 600 }) => {
       <span className="whitespace-pre-wrap text-4xl md:text-5xl">
         {displayed}
         {!isComplete && hasStarted && (
-          <span className="inline-block h-[0.9em] w-[2px] translate-y-[0.08em] animate-pulse bg-blue-600" />
+          <motion.span
+            animate={{ opacity: [1, 0] }}
+            transition={{ duration: 0.6, repeat: Infinity, repeatType: 'reverse' }}
+            className="inline-block h-[0.9em] w-[2px] translate-y-[0.08em] bg-blue-600"
+          />
         )}
       </span>
       {!hasStarted && (
-        <span className="text-4xl md:text-5xl text-slate-300">Built for student-focused teams<br />that care about<br />student experience.</span>
+        <span className="text-4xl md:text-5xl text-slate-300">
+          Built for student-focused teams<br />that care about<br />student experience.
+        </span>
       )}
     </div>
   );
@@ -325,6 +402,7 @@ const MagneticButton = ({ children, className = '', variant = 'primary', onClick
       onMouseMove={handleMove}
       onMouseLeave={reset}
       style={{ x: springX, y: springY }}
+      whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.97 }}
       className={cn(
         'group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl px-6 py-3.5 text-sm font-semibold transition-shadow duration-300',
@@ -337,7 +415,12 @@ const MagneticButton = ({ children, className = '', variant = 'primary', onClick
         className,
       )}
     >
-      <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+      <motion.span
+        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent"
+        initial={{ x: '-100%' }}
+        whileHover={{ x: '100%' }}
+        transition={{ duration: 0.7, ease: 'easeInOut' }}
+      />
       <span className="relative">{children}</span>
     </motion.button>
   );
@@ -398,14 +481,12 @@ const SpotlightCard = ({ children, className = '', glow = 'blue', tilt = 6 }) =>
 };
 
 /* =========================================================
-   SKETCH CHARACTER (eyes follow mouse, body tilts, peeking reaction)
+   SKETCH CHARACTER
    ========================================================= */
 
 const SketchCharacter = ({ mouseX, mouseY, peeking, contact }) => {
   const rotateX = useTransform(mouseY, [-1, 1], [8, -8]);
   const rotateY = useTransform(mouseX, [-1, 1], [-12, 12]);
-
-  // Pupil translations (relative to eye center)
   const pupilLeftOffsetX = useTransform(mouseX, [-1, 1], [-2, 2]);
   const pupilLeftOffsetY = useTransform(mouseY, [-1, 1], [-1.5, 1.5]);
   const pupilRightOffsetX = useTransform(mouseX, [-1, 1], [-2, 2]);
@@ -414,10 +495,7 @@ const SketchCharacter = ({ mouseX, mouseY, peeking, contact }) => {
   return (
     <motion.div style={{ rotateX, rotateY, transformPerspective: 800 }} className="w-full h-full">
       <svg viewBox="0 0 200 200" fill="none" className="w-full h-full">
-        {/* Body */}
         <path d="M100 75 L100 140" stroke="#1e293b" strokeWidth="4" strokeLinecap="round" />
-
-        {/* Left arm group */}
         <motion.g
           style={{ rotate: peeking ? -30 : 0, transformOrigin: '85px 85px' }}
           transition={{ type: 'spring', stiffness: 200, damping: 20 }}
@@ -425,33 +503,19 @@ const SketchCharacter = ({ mouseX, mouseY, peeking, contact }) => {
           <path d="M85 85 Q75 100 75 120" stroke="#1e293b" strokeWidth="4" strokeLinecap="round" fill="none" />
           <circle cx="75" cy="120" r="5" fill="#fbbf24" stroke="#1e293b" strokeWidth="2" />
         </motion.g>
-
-        {/* Right arm — lifts the phone when the contact field is active */}
         <motion.g
-          animate={{
-            rotate: peeking ? 8 : 0,
-            x: peeking ? 2 : 0,
-            y: peeking ? 2 : 0,
-          }}
+          animate={{ rotate: peeking ? 8 : 0, x: peeking ? 2 : 0, y: peeking ? 2 : 0 }}
           transition={{ type: 'spring', stiffness: 220, damping: 18 }}
           style={{ transformOrigin: '115px 85px' }}
         >
           <path
             d={peeking ? 'M115 85 Q126 94 132 103' : 'M115 85 Q125 100 125 120'}
-            stroke="#1e293b"
-            strokeWidth="4"
-            strokeLinecap="round"
-            fill="none"
+            stroke="#1e293b" strokeWidth="4" strokeLinecap="round" fill="none"
           />
           <circle
-            cx={peeking ? 132 : 125}
-            cy={peeking ? 103 : 120}
-            r="5"
-            fill="#fbbf24"
-            stroke="#1e293b"
-            strokeWidth="2"
+            cx={peeking ? 132 : 125} cy={peeking ? 103 : 120} r="5"
+            fill="#fbbf24" stroke="#1e293b" strokeWidth="2"
           />
-
           {peeking && (
             <motion.g
               initial={{ opacity: 0, scale: 0.8, y: 8 }}
@@ -462,41 +526,26 @@ const SketchCharacter = ({ mouseX, mouseY, peeking, contact }) => {
               <rect x="132" y="72" width="23" height="40" rx="4" fill="#0f172a" stroke="#334155" strokeWidth="2" />
               <rect x="135" y="76" width="17" height="30" rx="2.5" fill="#f8fafc" />
               <circle cx="143.5" cy="109" r="1.5" fill="#64748b" />
-              <text
-                x="143.5"
-                y="91"
-                textAnchor="middle"
-                fontSize="3.4"
-                fontWeight="600"
-                fill="#2563eb"
-              >
+              <text x="143.5" y="91" textAnchor="middle" fontSize="3.4" fontWeight="600" fill="#2563eb">
                 {contact || 'MOBILE'}
               </text>
             </motion.g>
           )}
         </motion.g>
-
-        {/* Head */}
         <circle cx="100" cy="50" r="25" fill="white" stroke="#1e293b" strokeWidth="4" />
-        {/* Eyes */}
         <ellipse cx="90" cy="48" rx="4" ry="5" fill="#1e293b" />
         <ellipse cx="110" cy="48" rx="4" ry="5" fill="#1e293b" />
-
-        {/* Pupils (follow mouse) */}
         <motion.g style={{ x: pupilLeftOffsetX, y: pupilLeftOffsetY }}>
           <circle cx="90" cy="48" r="1.5" fill="white" />
         </motion.g>
         <motion.g style={{ x: pupilRightOffsetX, y: pupilRightOffsetY }}>
           <circle cx="110" cy="48" r="1.5" fill="white" />
         </motion.g>
-
-        {/* Mouth */}
         <path d="M95 60 Q100 65 105 60" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
       </svg>
     </motion.div>
   );
 };
-
 
 /* =========================================================
    HERO VISUAL
@@ -504,27 +553,9 @@ const SketchCharacter = ({ mouseX, mouseY, peeking, contact }) => {
 
 const HeroVisual = () => {
   const cards = [
-    {
-      icon: Users,
-      title: 'Student cases',
-      value: '128',
-      detail: '+18% this month',
-      glow: 'blue',
-    },
-    {
-      icon: MessageCircle,
-      title: 'Conversations',
-      value: '42',
-      detail: '12 awaiting reply',
-      glow: 'violet',
-    },
-    {
-      icon: Shield,
-      title: 'Documents',
-      value: '96%',
-      detail: 'Secure & organized',
-      glow: 'cyan',
-    },
+    { icon: Users, title: 'Student cases', value: '128', detail: '+18% this month', glow: 'blue' },
+    { icon: MessageCircle, title: 'Conversations', value: '42', detail: '12 awaiting reply', glow: 'violet' },
+    { icon: Shield, title: 'Documents', value: '96%', detail: 'Secure & organized', glow: 'cyan' },
   ];
 
   return (
@@ -538,37 +569,28 @@ const HeroVisual = () => {
               key={title}
               initial={{ opacity: 0, y: 25 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.7,
-                delay: 0.35 + index * 0.12,
-                ease: [0.22, 1, 0.36, 1],
-              }}
+              transition={{ duration: 0.7, delay: 0.35 + index * 0.12, ease: [0.22, 1, 0.36, 1] }}
               whileHover={{ y: -8 }}
             >
               <SpotlightCard glow={glow} className="h-full">
                 <div className="p-6 text-left">
                   <div className="flex items-center justify-between">
-                    <div className="grid h-11 w-11 place-items-center rounded-2xl bg-slate-950 text-white shadow-lg">
+                    <motion.div
+                      whileHover={{ rotate: 8, scale: 1.1 }}
+                      className="grid h-11 w-11 place-items-center rounded-2xl bg-slate-950 text-white shadow-lg"
+                    >
                       <Icon className="h-5 w-5" />
-                    </div>
+                    </motion.div>
                     <ArrowRight className="h-4 w-4 text-slate-300" />
                   </div>
-
                   <p className="mt-7 text-sm font-semibold text-slate-500">{title}</p>
-                  <div className="mt-1 text-4xl font-semibold tracking-[-0.04em] text-slate-950">
-                    {value}
-                  </div>
+                  <div className="mt-1 text-4xl font-semibold tracking-[-0.04em] text-slate-950">{value}</div>
                   <p className="mt-2 text-xs font-medium text-blue-600">{detail}</p>
-
                   <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-slate-100">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${62 + index * 14}%` }}
-                      transition={{
-                        duration: 1.2,
-                        delay: 0.7 + index * 0.12,
-                        ease: [0.22, 1, 0.36, 1],
-                      }}
+                      transition={{ duration: 1.2, delay: 0.7 + index * 0.12, ease: [0.22, 1, 0.36, 1] }}
                       className="h-full rounded-full bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-400"
                     />
                   </div>
@@ -608,12 +630,7 @@ const HeroVisual = () => {
    ========================================================= */
 
 const BookDemoSection = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    address: '',
-    organization: '',
-    contact: '',
-  });
+  const [formData, setFormData] = useState({ name: '', address: '', organization: '', contact: '' });
   const [submitted, setSubmitted] = useState(false);
   const [contactFocused, setContactFocused] = useState(false);
   const mouseX = useMotionValue(0);
@@ -629,29 +646,19 @@ const BookDemoSection = () => {
     mouseY.set(Math.max(-1, Math.min(1, ny)));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setSubmitted(true);
-  };
+  const handleSubmit = (e) => { e.preventDefault(); setSubmitted(true); };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     if (name === 'contact') {
-      const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
-      setFormData((prev) => ({ ...prev, contact: digitsOnly }));
+      setFormData((prev) => ({ ...prev, contact: value.replace(/\D/g, '').slice(0, 10) }));
       return;
     }
-
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   return (
-    <section
-      id="book-demo"
-      className="relative z-10 px-6 py-16 md:py-24"
-      onMouseMove={handleMouseMove}
-    >
+    <section id="book-demo" className="relative z-10 px-6 py-16 md:py-24" onMouseMove={handleMouseMove}>
       <div className="mx-auto max-w-6xl">
         <Reveal>
           <div className="mb-12 text-center">
@@ -669,7 +676,6 @@ const BookDemoSection = () => {
         </Reveal>
 
         <div className="grid items-center gap-10 md:grid-cols-2">
-          {/* Form */}
           <Reveal delay={0.1}>
             <SpotlightCard glow="blue" className="h-full">
               <div className="p-8">
@@ -688,60 +694,28 @@ const BookDemoSection = () => {
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-5">
-                    <div>
-                      <label htmlFor="name" className="block text-sm font-semibold text-slate-700">Name</label>
-                      <input
-                        id="name"
-                        name="name"
-                        type="text"
-                        required
-                        value={formData.name}
-                        onChange={handleChange}
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                        placeholder="Your full name"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="address" className="block text-sm font-semibold text-slate-700">Address</label>
-                      <input
-                        id="address"
-                        name="address"
-                        type="text"
-                        required
-                        value={formData.address}
-                        onChange={handleChange}
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                        placeholder="City, Country"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="organization" className="block text-sm font-semibold text-slate-700">Organization Name</label>
-                      <input
-                        id="organization"
-                        name="organization"
-                        type="text"
-                        required
-                        value={formData.organization}
-                        onChange={handleChange}
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                        placeholder="Your organization name"
-                      />
-                    </div>
+                    {[
+                      { id: 'name', label: 'Name', type: 'text', placeholder: 'Your full name' },
+                      { id: 'address', label: 'Address', type: 'text', placeholder: 'City, Country' },
+                      { id: 'organization', label: 'Organization Name', type: 'text', placeholder: 'Your organization name' },
+                    ].map(({ id, label, type, placeholder }) => (
+                      <div key={id}>
+                        <label htmlFor={id} className="block text-sm font-semibold text-slate-700">{label}</label>
+                        <input
+                          id={id} name={id} type={type} required
+                          value={formData[id]} onChange={handleChange}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                          placeholder={placeholder}
+                        />
+                      </div>
+                    ))}
                     <div>
                       <label htmlFor="contact" className="block text-sm font-semibold text-slate-700">Contact Number</label>
                       <input
-                        id="contact"
-                        name="contact"
-                        type="tel"
-                        inputMode="numeric"
-                        pattern="[0-9]{10}"
-                        maxLength={10}
-                        minLength={10}
-                        required
-                        value={formData.contact}
-                        onChange={handleChange}
-                        onFocus={() => setContactFocused(true)}
-                        onBlur={() => setContactFocused(false)}
+                        id="contact" name="contact" type="tel" inputMode="numeric"
+                        pattern="[0-9]{10}" maxLength={10} minLength={10} required
+                        value={formData.contact} onChange={handleChange}
+                        onFocus={() => setContactFocused(true)} onBlur={() => setContactFocused(false)}
                         className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-xs md:text-sm text-slate-900 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                         placeholder="Enter 10-digit mobile number"
                       />
@@ -758,7 +732,6 @@ const BookDemoSection = () => {
             </SpotlightCard>
           </Reveal>
 
-          {/* Character */}
           <Reveal delay={0.2} className="flex justify-center">
             <div ref={characterRef} className="relative h-72 w-72 md:h-96 md:w-96">
               <SketchCharacter mouseX={mouseX} mouseY={mouseY} peeking={contactFocused} contact={formData.contact} />
@@ -766,16 +739,12 @@ const BookDemoSection = () => {
           </Reveal>
         </div>
 
-        {/* Contact info */}
         <Reveal delay={0.15}>
           <div className="mt-10 text-center">
             <p className="text-sm text-slate-500">
               Or contact <span className="font-semibold text-slate-700">Yogesh Luitle</span> — Product Manager / Founder
             </p>
-            <a
-              href="tel:9767223140"
-              className="mt-2 inline-flex items-center gap-2 text-lg font-semibold text-blue-700 transition hover:text-blue-900"
-            >
+            <a href="tel:9767223140" className="mt-2 inline-flex items-center gap-2 text-lg font-semibold text-blue-700 transition hover:text-blue-900">
               <Phone className="h-5 w-5" />
               9767223140
             </a>
@@ -792,16 +761,24 @@ const BookDemoSection = () => {
 
 const VisaSteps = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    document.title = 'VisaSteps — Student Consultancy Platform';
-  }, []);
   const { scrollYProgress } = useScroll();
   const progressScale = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
+
+  // Scroll-driven background color
+  const bgHue = useTransform(scrollYProgress, [0, 0.5, 1], [220, 250, 220]);
+  const bgColor = useMotionTemplate`hsl(${bgHue}, 6%, 97%)`;
+
+  // Scroll-driven ambient blobs
+  const blobY1 = useTransform(scrollYProgress, [0, 1], [0, -200]);
+  const blobY2 = useTransform(scrollYProgress, [0, 1], [0, -300]);
 
   const scrollToBookDemo = () => {
     document.getElementById('book-demo')?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  useEffect(() => {
+    document.title = 'VisaSteps — Student Consultancy Platform';
+  }, []);
 
   const menu = [
     ['Features', '#features'],
@@ -820,27 +797,40 @@ const VisaSteps = () => {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#F7F8FC] font-sans text-slate-900 selection:bg-slate-950 selection:text-white">
+    <motion.div
+      style={{ backgroundColor: bgColor }}
+      className="min-h-screen overflow-x-hidden font-sans text-slate-900 selection:bg-slate-950 selection:text-white"
+    >
       <style>{`html { scroll-behavior: smooth; }`}</style>
+
+      {/* Scroll-reactive backgrounds */}
+      <ScrollReactiveAurora />
       <InteractiveParticleNetwork />
 
       {/* Scroll progress */}
       <motion.div
         style={{ scaleX: progressScale }}
-        className="fixed left-0 right-0 top-0 z-[70] h-1 origin-left bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-400"
+        className="fixed left-0 right-0 top-0 z-[70] h-[3px] origin-left bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-400"
       />
 
-      {/* Ambient color wash */}
-      <div className="pointer-events-none fixed -left-32 top-32 z-0 h-80 w-80 rounded-full bg-blue-500/10 blur-[100px]" />
+      {/* Ambient blobs (parallax) */}
       <motion.div
-        animate={{ x: [0, 40, 0], y: [0, -20, 0] }}
-        transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ y: blobY1 }}
+        className="pointer-events-none fixed -left-32 top-32 z-0 h-80 w-80 rounded-full bg-blue-500/10 blur-[100px]"
+      />
+      <motion.div
+        style={{ y: blobY2 }}
         className="pointer-events-none fixed right-0 top-1/3 z-0 h-72 w-72 rounded-full bg-violet-500/10 blur-[110px]"
       />
 
       {/* Navigation */}
       <header className="fixed left-1/2 top-4 z-[60] w-[calc(100%-24px)] max-w-6xl -translate-x-1/2">
-        <div className="flex items-center justify-between rounded-2xl border border-white/80 bg-white/75 px-4 py-3 shadow-[0_18px_55px_rgba(15,23,42,0.08)] backdrop-blur-2xl">
+        <motion.div
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="flex items-center justify-between rounded-2xl border border-white/80 bg-white/75 px-4 py-3 shadow-[0_18px_55px_rgba(15,23,42,0.08)] backdrop-blur-2xl"
+        >
           <a href="#" className="flex items-center gap-2.5">
             <motion.div
               whileHover={{ rotate: 10, scale: 1.05 }}
@@ -854,10 +844,10 @@ const VisaSteps = () => {
           </a>
 
           <nav className="hidden items-center gap-6 md:flex">
-            {menu.map(([label, href]) => (
+            {menu.map(([label]) => (
               <a
                 key={label}
-                href={linkMap[href]}
+                href={linkMap[`#${label.toLowerCase()}`]}
                 className="group flex items-center gap-1 text-xs font-semibold text-slate-500 transition hover:text-slate-950"
               >
                 {label}
@@ -869,14 +859,8 @@ const VisaSteps = () => {
           </nav>
 
           <div className="hidden items-center gap-4 md:flex">
-            <a href="#login" className="text-xs font-semibold text-slate-500 transition hover:text-slate-950">
-              Log in
-            </a>
-            <MagneticButton
-              variant="primary"
-              className="rounded-xl px-4 py-2.5 text-xs"
-              onClick={scrollToBookDemo}
-            >
+            <a href="#login" className="text-xs font-semibold text-slate-500 transition hover:text-slate-950">Log in</a>
+            <MagneticButton variant="primary" className="rounded-xl px-4 py-2.5 text-xs" onClick={scrollToBookDemo}>
               Book a demo
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             </MagneticButton>
@@ -889,41 +873,38 @@ const VisaSteps = () => {
           >
             Menu
           </button>
-        </div>
+        </motion.div>
 
-        {/* Mobile menu */}
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -6, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: 'auto' }}
-            exit={{ opacity: 0, y: -6, height: 0 }}
-            className="mt-2 overflow-hidden rounded-2xl border border-white/80 bg-white/75 backdrop-blur-2xl md:hidden"
-          >
-            <div className="grid gap-1 p-4">
-              {menu.map(([label, href]) => (
+        <AnimatePresence>
+          {mobileOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -6, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: 'auto' }}
+              exit={{ opacity: 0, y: -6, height: 0 }}
+              className="mt-2 overflow-hidden rounded-2xl border border-white/80 bg-white/75 backdrop-blur-2xl md:hidden"
+            >
+              <div className="grid gap-1 p-4">
+                {menu.map(([label]) => (
+                  <a
+                    key={label}
+                    href={linkMap[`#${label.toLowerCase()}`]}
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-white/50"
+                  >
+                    {label}
+                  </a>
+                ))}
                 <a
-                  key={label}
-                  href={linkMap[href]}
-                  onClick={() => setMobileOpen(false)}
-                  className="rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-white/50"
+                  href="#book-demo"
+                  onClick={(e) => { e.preventDefault(); setMobileOpen(false); scrollToBookDemo(); }}
+                  className="mt-1 rounded-xl bg-slate-950 px-3 py-3 text-center text-sm font-semibold text-white"
                 >
-                  {label}
+                  Book a demo
                 </a>
-              ))}
-              <a
-                href="#book-demo"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setMobileOpen(false);
-                  scrollToBookDemo();
-                }}
-                className="mt-1 rounded-xl bg-slate-950 px-3 py-3 text-center text-sm font-semibold text-white"
-              >
-                Book a demo
-              </a>
-            </div>
-          </motion.div>
-        )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       {/* Hero */}
@@ -938,20 +919,14 @@ const VisaSteps = () => {
 
           <BlurReveal delay={0.08}>
             <h1 className="mx-auto mt-7 max-w-5xl text-5xl font-semibold leading-[0.97] tracking-[-0.06em] text-slate-950 md:text-7xl lg:text-8xl">
-              Run your consultancy
-              <br />
-              with{' '}
-              <HeroTypewriter
-                words={['clarity.', 'confidence.', 'possibilities.', 'belief.']}
-                interval={2400}
-              />
+              Run your consultancy<br />
+              with <HeroTypewriter words={['clarity.', 'confidence.', 'possibilities.', 'belief.']} interval={2400} />
             </h1>
           </BlurReveal>
 
           <Reveal delay={0.16}>
             <p className="mx-auto mt-7 max-w-2xl text-base leading-7 text-slate-600 md:text-lg">
-              Keep student cases, documents, and communication organized—so you can focus on what
-              matters most: people and possibilities.
+              Keep student cases, documents, and communication organized—so you can focus on what matters most: people and possibilities.
             </p>
           </Reveal>
 
@@ -977,7 +952,7 @@ const VisaSteps = () => {
         <div className="mx-auto max-w-6xl">
           <div className="grid gap-4 md:grid-cols-3">
             {[
-              { icon: Shield, title: 'Secure & reliable', desc: 'Your data and your students’ trust are protected.' },
+              { icon: Shield, title: 'Secure & reliable', desc: "Your data and your students' trust are protected." },
               { icon: Users, title: 'Built for education teams', desc: 'Designed for teams, for better student support.' },
               { icon: Heart, title: 'Student experience first', desc: 'Every feature is crafted to support the human journey.' },
             ].map(({ icon: Icon, title, desc }, index) => (
@@ -1000,7 +975,7 @@ const VisaSteps = () => {
         </div>
       </section>
 
-      {/* Promise Card with Scroll-Triggered Typewriter */}
+      {/* Promise Card */}
       <section id="promise" className="relative z-10 px-6 py-28 md:py-36">
         <div className="mx-auto max-w-6xl">
           <SpotlightCard glow="violet" className="min-h-[300px]">
@@ -1014,27 +989,20 @@ const VisaSteps = () => {
                 </Reveal>
                 <div className="mt-5 max-w-md">
                   <PromiseTypewriter
-                    lines={[
-                      'Built for student-focused teams',
-                      'that care about',
-                      'student experience.',
-                    ]}
+                    lines={['Built for student-focused teams', 'that care about', 'student experience.']}
                     delayBetweenLines={500}
                   />
                 </div>
                 <Reveal delay={0.3}>
                   <p className="mt-6 max-w-sm text-sm leading-6 text-slate-600">
-                    Visa Steps helps you stay organized, respond faster, and guide every student
-                    journey with confidence and care.
+                    Visa Steps helps you stay organized, respond faster, and guide every student journey with confidence and care.
                   </p>
                 </Reveal>
               </div>
               <div className="relative min-h-[200px] rounded-[24px] bg-gradient-to-br from-blue-50 via-violet-50 to-cyan-50 p-6 shadow-inner">
-                <div className="flex h-full flex-col items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-3xl font-serif font-semibold text-slate-800">Guiding dreams.</div>
-                    <div className="text-3xl font-serif font-semibold text-slate-800">Building futures.</div>
-                  </div>
+                <div className="flex h-full flex-col items-center justify-center text-center">
+                  <div className="text-3xl font-serif font-semibold text-slate-800">Guiding dreams.</div>
+                  <div className="text-3xl font-serif font-semibold text-slate-800">Building futures.</div>
                   <motion.div
                     animate={{ y: [0, -6, 0] }}
                     transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
@@ -1076,30 +1044,9 @@ const VisaSteps = () => {
 
           <div className="mt-12 grid gap-5 md:grid-cols-3 [perspective:1400px]">
             {[
-              {
-                icon: Users,
-                title: 'Stay organized',
-                desc: 'Centralize student cases and documents so nothing falls through the cracks.',
-                glow: 'blue',
-                accent: 'from-blue-500 via-cyan-400 to-blue-600',
-                metric: '01',
-              },
-              {
-                icon: Sparkles,
-                title: 'Communicate with ease',
-                desc: 'Keep every conversation in one place and respond faster.',
-                glow: 'violet',
-                accent: 'from-violet-500 via-fuchsia-400 to-blue-500',
-                metric: '02',
-              },
-              {
-                icon: Shield,
-                title: 'Work with confidence',
-                desc: 'Protect data, maintain compliance, and build trust with every interaction.',
-                glow: 'cyan',
-                accent: 'from-cyan-400 via-blue-500 to-violet-500',
-                metric: '03',
-              },
+              { icon: Users, title: 'Stay organized', desc: 'Centralize student cases and documents so nothing falls through the cracks.', glow: 'blue', accent: 'from-blue-500 via-cyan-400 to-blue-600', metric: '01' },
+              { icon: Sparkles, title: 'Communicate with ease', desc: 'Keep every conversation in one place and respond faster.', glow: 'violet', accent: 'from-violet-500 via-fuchsia-400 to-blue-500', metric: '02' },
+              { icon: Shield, title: 'Work with confidence', desc: 'Protect data, maintain compliance, and build trust with every interaction.', glow: 'cyan', accent: 'from-cyan-400 via-blue-500 to-violet-500', metric: '03' },
             ].map(({ icon: Icon, title, desc, glow, accent, metric }, index) => (
               <Reveal key={title} delay={index * 0.1} y={42}>
                 <motion.div
@@ -1138,14 +1085,7 @@ const VisaSteps = () => {
                           />
                           <Icon className="relative z-10 h-5 w-5" />
                         </motion.div>
-
-                        <motion.span
-                          initial={{ opacity: 0.35 }}
-                          whileHover={{ opacity: 1, scale: 1.08 }}
-                          className="text-[10px] font-bold tracking-[0.22em] text-slate-300"
-                        >
-                          {metric}
-                        </motion.span>
+                        <span className="text-[10px] font-bold tracking-[0.22em] text-slate-300">{metric}</span>
                       </div>
 
                       <div className="relative z-20 mt-auto">
@@ -1158,14 +1098,8 @@ const VisaSteps = () => {
                             className={`h-full w-full bg-gradient-to-r ${accent}`}
                           />
                         </div>
-
-                        <h3 className="text-2xl font-semibold tracking-[-0.035em] text-slate-950 transition-transform duration-300 group-hover:translate-x-1">
-                          {title}
-                        </h3>
-                        <p className="mt-3 max-w-xs text-sm leading-6 text-slate-500">
-                          {desc}
-                        </p>
-
+                        <h3 className="text-2xl font-semibold tracking-[-0.035em] text-slate-950 transition-transform duration-300 group-hover:translate-x-1">{title}</h3>
+                        <p className="mt-3 max-w-xs text-sm leading-6 text-slate-500">{desc}</p>
                         <div className="mt-6 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400 transition-colors duration-300 group-hover:text-blue-600">
                           Explore capability
                           <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1.5" />
@@ -1195,65 +1129,47 @@ const VisaSteps = () => {
             className="relative overflow-hidden rounded-[24px] bg-slate-950 px-7 py-12 shadow-[0_24px_60px_rgba(7,50,99,0.20)] sm:px-10 sm:py-14"
           >
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_20%,rgba(74,126,255,0.20),transparent_28%),radial-gradient(circle_at_100%_100%,rgba(211,170,74,0.16),transparent_28%)]" />
-
             <motion.div
               animate={{ x: [0, 12, 0], y: [0, -3, 0] }}
               transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
               className="absolute -right-4 bottom-[-30px] h-28 w-28 rotate-[-23deg] border-b-2 border-r-2 border-blue-500/60"
             />
-
             <div className="relative flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h2 className="max-w-lg text-3xl font-semibold leading-[1.04] tracking-[-0.035em] text-white sm:text-4xl">
-                  Ready to bring more clarity
-                  <br />
-                  to your student support?
+                  Ready to bring more clarity<br />to your student support?
                 </h2>
-                <p className="mt-3 text-sm leading-5 text-white/70">
-                  Let's build better outcomes for your students—together.
-                </p>
+                <p className="mt-3 text-sm leading-5 text-white/70">Let's build better outcomes for your students—together.</p>
               </div>
-
               <div className="flex flex-wrap gap-3">
-                <MagneticButton
-                  variant="primary"
-                  className="bg-blue-600 shadow-[0_16px_35px_rgba(0,0,0,0.18)] hover:bg-blue-700"
-                  onClick={scrollToBookDemo}
-                >
+                <MagneticButton variant="primary" className="bg-blue-600 shadow-[0_16px_35px_rgba(0,0,0,0.18)] hover:bg-blue-700" onClick={scrollToBookDemo}>
                   Book a demo
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </MagneticButton>
-                <MagneticButton variant="ghost" className="border-white/40 text-white hover:bg-white/10">
-                  Talk to our team
-                </MagneticButton>
+                <MagneticButton variant="ghost" className="border-white/40 text-white hover:bg-white/10">Talk to our team</MagneticButton>
               </div>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* New Book a Demo Section */}
       <BookDemoSection />
 
-      {/* Anchor sections */}
       <section id="solutions" className="h-8" aria-hidden="true" />
       <section id="resources" className="h-0" aria-hidden="true" />
       <section id="pricing" className="h-0" aria-hidden="true" />
       <section id="about" className="h-0" aria-hidden="true" />
 
-      {/* Footer */}
       <footer className="relative z-10 border-t border-slate-200/80 bg-white/55 px-6 py-8 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 text-center md:flex-row md:items-center md:justify-between md:text-left">
           <div>
             <div className="text-sm font-bold text-slate-950">Visa Steps</div>
             <div className="mt-1 text-xs text-slate-400">Simple tools for clearer student journeys.</div>
           </div>
-          <div className="text-xs text-slate-400">
-            © {new Date().getFullYear()} Visa Steps · All rights reserved.
-          </div>
+          <div className="text-xs text-slate-400">© {new Date().getFullYear()} Visa Steps · All rights reserved.</div>
         </div>
       </footer>
-    </div>
+    </motion.div>
   );
 };
 
